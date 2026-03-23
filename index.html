@@ -4,595 +4,344 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ECG AI — Chẩn Đoán Tim Mạch</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
 <style>
 :root {
-  --red: #e8293a;
-  --red-soft: #ff4d5e;
-  --red-glow: rgba(232,41,58,0.35);
-  --dark: #050a0f;
-  --dark2: #0a1219;
-  --dark3: #0f1c26;
-  --panel: rgba(10,18,25,0.85);
-  --border: rgba(232,41,58,0.18);
-  --text: #d6e8f0;
-  --text-dim: #6a8fa3;
-  --cyan: #00d4ff;
-  --cyan-glow: rgba(0,212,255,0.2);
-  --white: #f0f8ff;
+  --bg:        #f0f4f8;
+  --bg2:       #e6ecf2;
+  --bg3:       #dce5ed;
+  --panel:     #ffffff;
+  --panel2:    #f7fafc;
+  --border:    #ccd8e4;
+  --border2:   #b8ccdb;
+  --ecg:       #00e676;
+  --ecg-glow:  rgba(0,230,118,0.55);
+  --ecg-dim:   rgba(0,230,118,0.15);
+  --blue:      #1565c0;
+  --blue-mid:  #1976d2;
+  --blue-light:#e3f0ff;
+  --cyan:      #0097a7;
+  --text:      #1a2a38;
+  --text-mid:  #3d5a72;
+  --text-dim:  #7a9bb5;
+  --red:       #c62828;
+  --red-soft:  #e53935;
+  --amber:     #e65100;
+  --shadow:    0 2px 16px rgba(21,101,192,0.10);
+  --shadow-lg: 0 8px 40px rgba(21,101,192,0.14);
 }
-
 *{margin:0;padding:0;box-sizing:border-box;}
-
 html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;overflow-x:hidden;}
+::-webkit-scrollbar{width:5px;}
+::-webkit-scrollbar-track{background:var(--bg2);}
+::-webkit-scrollbar-thumb{background:var(--blue-mid);border-radius:3px;}
 
-body{
-  background:var(--dark);
-  color:var(--text);
-  font-family:'DM Sans',sans-serif;
-  overflow-x:hidden;
-  cursor:default;
-}
-
-/* ─── NOISE OVERLAY ─── */
-body::before{
-  content:'';
-  position:fixed;inset:0;
-  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
-  pointer-events:none;z-index:0;opacity:0.5;
-}
-
-/* ─── HERO ─── */
-#hero{
-  min-height:100vh;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  position:relative;overflow:hidden;
-  padding:0 24px;
-}
-
-/* Radial glow bg */
-#hero::after{
-  content:'';
-  position:absolute;
-  width:900px;height:900px;
-  background:radial-gradient(circle, rgba(232,41,58,0.1) 0%, transparent 65%);
-  top:50%;left:50%;transform:translate(-50%,-50%);
-  pointer-events:none;
-}
-
-/* Grid lines */
-.grid-bg{
-  position:absolute;inset:0;
-  background-image:
-    linear-gradient(rgba(232,41,58,0.04) 1px,transparent 1px),
-    linear-gradient(90deg,rgba(232,41,58,0.04) 1px,transparent 1px);
-  background-size:60px 60px;
-  pointer-events:none;
-}
-
-/* ─── ECG CANVAS ─── */
-#ecg-canvas{
-  position:absolute;
-  bottom:0;left:0;right:0;
-  height:160px;
-  pointer-events:none;
-  z-index:1;
-}
-
-/* ─── NAV ─── */
+/* ── NAV ── */
 nav{
-  position:fixed;top:0;left:0;right:0;
-  z-index:100;
-  padding:18px 40px;
-  display:flex;align-items:center;justify-content:space-between;
-  background:rgba(5,10,15,0.8);
-  backdrop-filter:blur(20px);
+  position:fixed;top:0;left:0;right:0;z-index:200;
+  background:rgba(240,244,248,0.88);backdrop-filter:blur(18px);
   border-bottom:1px solid var(--border);
+  padding:0 48px;height:60px;
+  display:flex;align-items:center;justify-content:space-between;
 }
-
 .nav-logo{
-  font-family:'Space Mono',monospace;
-  font-size:13px;letter-spacing:2px;
-  color:var(--red);
-  text-transform:uppercase;
   display:flex;align-items:center;gap:10px;
+  font-family:'Space Mono',monospace;font-size:13px;letter-spacing:1.5px;
+  color:var(--blue);text-transform:uppercase;font-weight:700;
+}
+.live-dot{
+  width:9px;height:9px;background:var(--ecg);border-radius:50%;
+  box-shadow:0 0 0 3px var(--ecg-dim);
+  animation:livePulse 1.6s ease-in-out infinite;
+}
+@keyframes livePulse{
+  0%,100%{box-shadow:0 0 0 3px var(--ecg-dim);}
+  50%{box-shadow:0 0 0 7px rgba(0,230,118,0.05);}
+}
+.nav-links{display:flex;gap:30px;}
+.nav-links a{font-size:13px;letter-spacing:.5px;color:var(--text-mid);text-decoration:none;transition:color .2s;font-weight:500;}
+.nav-links a:hover{color:var(--blue);}
+
+/* ── HERO ── */
+#hero{
+  min-height:100vh;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  position:relative;overflow:hidden;padding:80px 24px 0;
+  background:linear-gradient(160deg,#e8f1fa 0%,#f0f4f8 45%,#e4f0e8 100%);
+}
+#hero::before{
+  content:'';position:absolute;inset:0;
+  background-image:linear-gradient(rgba(21,101,192,0.045) 1px,transparent 1px),linear-gradient(90deg,rgba(21,101,192,0.045) 1px,transparent 1px);
+  background-size:48px 48px;pointer-events:none;
 }
 
-.nav-logo .pulse{
-  width:8px;height:8px;
-  background:var(--red);
-  border-radius:50%;
-  animation:blink 1.4s infinite;
-}
-
-@keyframes blink{0%,100%{opacity:1;box-shadow:0 0 0 0 var(--red-glow);}50%{opacity:0.3;box-shadow:0 0 0 6px transparent;}}
-
-.nav-links{display:flex;gap:32px;}
-.nav-links a{
-  font-size:13px;letter-spacing:1px;
-  color:var(--text-dim);text-decoration:none;
-  text-transform:uppercase;
-  transition:color .2s;
-}
-.nav-links a:hover{color:var(--white);}
-
-/* ─── HERO CONTENT ─── */
-.hero-content{
-  position:relative;z-index:2;
-  text-align:center;
-  max-width:900px;
-}
-
-.hero-badge{
-  display:inline-flex;align-items:center;gap:8px;
-  background:rgba(232,41,58,0.1);
-  border:1px solid rgba(232,41,58,0.3);
-  border-radius:100px;
-  padding:6px 18px;
-  font-family:'Space Mono',monospace;
-  font-size:11px;letter-spacing:2px;
-  color:var(--red-soft);
-  text-transform:uppercase;
-  margin-bottom:36px;
-  animation:fadeUp .8s ease both;
-}
-
-.hero-badge svg{width:12px;height:12px;fill:var(--red-soft);}
-
-.hero-title{
-  font-family:'Syne',sans-serif;
-  font-size:clamp(42px,7vw,90px);
-  font-weight:800;
-  line-height:0.95;
-  letter-spacing:-3px;
-  margin-bottom:12px;
-  animation:fadeUp .8s .1s ease both;
-}
-
-.hero-title .line1{color:var(--white);}
-.hero-title .line2{
-  background:linear-gradient(135deg,var(--red) 0%,#ff6b7a 50%,var(--red) 100%);
-  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
-  background-clip:text;
-  background-size:200%;
-  animation:fadeUp .8s .2s ease both, shimmer 4s linear infinite;
-}
-
-@keyframes shimmer{0%{background-position:0%}100%{background-position:200%}}
-
-.hero-sub{
-  font-size:clamp(15px,2vw,18px);
-  color:var(--text-dim);
-  font-weight:300;
-  line-height:1.6;
-  max-width:600px;margin:0 auto;
-  margin-top:20px;
-  margin-bottom:48px;
-  animation:fadeUp .8s .3s ease both;
-}
-
-.hero-sub em{color:var(--cyan);font-style:normal;}
-
-/* CTA Button */
-.btn-demo{
-  display:inline-flex;align-items:center;gap:12px;
-  background:var(--red);
-  color:#fff;
-  font-family:'Syne',sans-serif;
-  font-size:16px;font-weight:700;
-  letter-spacing:1px;
-  padding:18px 44px;
-  border-radius:4px;
-  text-decoration:none;
-  border:none;cursor:pointer;
-  position:relative;overflow:hidden;
-  transition:transform .2s, box-shadow .2s;
-  animation:fadeUp .8s .4s ease both;
-  box-shadow:0 0 40px rgba(232,41,58,0.4);
-}
-
-.btn-demo::before{
-  content:'';
-  position:absolute;inset:0;
-  background:linear-gradient(135deg,rgba(255,255,255,0.15),transparent);
-  opacity:0;transition:opacity .2s;
-}
-.btn-demo:hover{transform:translateY(-3px);box-shadow:0 8px 60px rgba(232,41,58,0.6);}
-.btn-demo:hover::before{opacity:1;}
-.btn-demo:active{transform:translateY(-1px);}
-
-.btn-demo .arrow{
-  width:20px;height:20px;
-  border:2px solid rgba(255,255,255,0.6);
-  border-radius:50%;
-  display:flex;align-items:center;justify-content:center;
-  font-size:10px;
-  transition:transform .2s;
-}
-.btn-demo:hover .arrow{transform:translateX(4px);}
-
-/* Hero stats */
-.hero-stats{
-  display:flex;gap:48px;justify-content:center;margin-top:60px;
-  animation:fadeUp .8s .5s ease both;
-}
-
-.stat{text-align:center;}
-.stat-val{
-  font-family:'Space Mono',monospace;
-  font-size:28px;font-weight:700;
-  color:var(--white);
-  display:block;
-}
-.stat-val span{color:var(--red);}
-.stat-label{
-  font-size:11px;letter-spacing:2px;
-  color:var(--text-dim);text-transform:uppercase;
-  margin-top:4px;display:block;
-}
-
-/* ─── ECG ANIMATION ─── */
-.ecg-wrapper{
-  position:absolute;
-  width:100%;
-  bottom:0;left:0;
-  height:140px;
-  overflow:hidden;
+/* Monitor strip at bottom */
+.monitor-wrap{
+  position:absolute;bottom:0;left:0;right:0;height:210px;
+  background:linear-gradient(to top,#081a0e 0%,#081a0e 72%,transparent 100%);
   pointer-events:none;
 }
-
-.ecg-line{
-  position:absolute;
-  bottom:40px;
-  left:0;
-  width:200%;
-  height:80px;
+.monitor-grid{
+  position:absolute;inset:0;
+  background-image:linear-gradient(rgba(0,180,80,0.09) 1px,transparent 1px),linear-gradient(90deg,rgba(0,180,80,0.09) 1px,transparent 1px);
+  background-size:40px 40px;
 }
-
-/* ─── SECTIONS COMMON ─── */
-section{
-  position:relative;z-index:2;
-  padding:100px 40px;
+.monitor-scanline{
+  position:absolute;inset:0;
+  background:repeating-linear-gradient(0deg,rgba(0,0,0,0.06) 0px,rgba(0,0,0,0.06) 1px,transparent 1px,transparent 3px);
 }
+#ecg-canvas{position:absolute;bottom:0;left:0;right:0;width:100%;height:210px;pointer-events:none;z-index:2;}
+.monitor-label{
+  position:absolute;bottom:175px;left:52px;
+  font-family:'Space Mono',monospace;font-size:10px;letter-spacing:2.5px;
+  color:rgba(0,230,118,0.65);z-index:3;pointer-events:none;
+}
+.monitor-hr{
+  position:absolute;bottom:168px;right:52px;
+  font-family:'Space Mono',monospace;font-size:11px;
+  color:rgba(0,230,118,0.65);z-index:3;pointer-events:none;text-align:right;line-height:1.5;
+}
+.monitor-hr .big{font-size:36px;color:var(--ecg);line-height:1;display:block;}
 
+/* Hero content */
+.hero-inner{position:relative;z-index:5;text-align:center;max-width:860px;}
+.hero-chip{
+  display:inline-flex;align-items:center;gap:8px;
+  background:var(--blue-light);border:1px solid rgba(21,101,192,0.2);border-radius:100px;
+  padding:5px 18px;font-family:'Space Mono',monospace;font-size:10px;letter-spacing:1.5px;
+  color:var(--blue);text-transform:uppercase;margin-bottom:28px;
+  animation:fadeUp .7s ease both;
+}
+.hero-title{
+  font-family:'Syne',sans-serif;font-size:clamp(38px,6.5vw,82px);
+  font-weight:800;line-height:1;letter-spacing:-2px;margin-bottom:8px;
+  animation:fadeUp .7s .1s ease both;
+}
+.hero-title .t1{color:var(--text);}
+.hero-title .t2{color:var(--blue);position:relative;display:inline-block;}
+.hero-title .t2::after{
+  content:'';position:absolute;bottom:-6px;left:0;right:0;height:4px;
+  background:linear-gradient(90deg,var(--ecg),rgba(0,230,118,0.2));border-radius:2px;
+}
+.hero-desc{
+  font-size:clamp(15px,1.8vw,18px);color:var(--text-mid);line-height:1.75;
+  max-width:580px;margin:28px auto 40px;font-weight:300;
+  animation:fadeUp .7s .2s ease both;
+}
+.hero-desc strong{color:var(--blue);font-weight:600;}
+
+.btn-demo{
+  display:inline-flex;align-items:center;gap:12px;background:var(--blue);color:#fff;
+  font-family:'Syne',sans-serif;font-size:15px;font-weight:700;letter-spacing:.5px;
+  padding:16px 42px;border-radius:6px;text-decoration:none;
+  box-shadow:0 4px 24px rgba(21,101,192,0.35);
+  transition:transform .2s,box-shadow .2s,background .2s;
+  animation:fadeUp .7s .3s ease both;position:relative;overflow:hidden;
+}
+.btn-demo::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,0.12),transparent);}
+.btn-demo:hover{transform:translateY(-3px);box-shadow:0 10px 36px rgba(21,101,192,0.45);background:#1976d2;}
+.btn-demo .arr{
+  width:22px;height:22px;background:rgba(255,255,255,0.15);border-radius:50%;
+  display:flex;align-items:center;justify-content:center;font-size:12px;transition:transform .2s;
+}
+.btn-demo:hover .arr{transform:translateX(4px);}
+
+.hero-stats{
+  display:flex;gap:0;justify-content:center;margin-top:52px;
+  border:1px solid var(--border);border-radius:10px;
+  background:var(--panel);box-shadow:var(--shadow);overflow:hidden;
+  animation:fadeUp .7s .4s ease both;
+}
+.hstat{flex:1;padding:22px 18px;border-right:1px solid var(--border);text-align:center;transition:background .2s;}
+.hstat:last-child{border-right:none;}
+.hstat:hover{background:var(--blue-light);}
+.hstat-val{font-family:'Space Mono',monospace;font-size:24px;font-weight:700;color:var(--blue);display:block;}
+.hstat-val sup{font-size:13px;color:var(--text-dim);}
+.hstat-lbl{font-size:10px;letter-spacing:1.5px;color:var(--text-dim);text-transform:uppercase;margin-top:4px;display:block;}
+
+/* ── SECTIONS ── */
+section{padding:96px 48px;position:relative;z-index:2;}
 .container{max-width:1100px;margin:0 auto;}
-
-.section-tag{
-  font-family:'Space Mono',monospace;
-  font-size:11px;letter-spacing:3px;color:var(--red);
-  text-transform:uppercase;
-  margin-bottom:16px;
-  display:flex;align-items:center;gap:10px;
+.sec-tag{
+  display:inline-flex;align-items:center;gap:8px;
+  font-family:'Space Mono',monospace;font-size:10px;letter-spacing:3px;
+  color:var(--blue-mid);text-transform:uppercase;margin-bottom:14px;
 }
-.section-tag::before{content:'//'; color:var(--text-dim);}
-
-.section-title{
-  font-family:'Syne',sans-serif;
-  font-size:clamp(28px,4vw,52px);
-  font-weight:800;
-  line-height:1.05;
-  letter-spacing:-1.5px;
-  color:var(--white);
-  margin-bottom:16px;
+.sec-tag::before{content:'';width:24px;height:2px;background:var(--ecg);border-radius:1px;}
+.sec-title{
+  font-family:'Syne',sans-serif;font-size:clamp(26px,3.5vw,48px);
+  font-weight:800;line-height:1.05;letter-spacing:-1px;color:var(--text);margin-bottom:12px;
 }
 
-/* ─── ABOUT SECTION ─── */
-#about{
-  background:var(--dark2);
-  border-top:1px solid var(--border);
-  border-bottom:1px solid var(--border);
+/* ── ABOUT ── */
+#about{background:var(--panel);}
+.about-grid{display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:center;}
+.about-body p{font-size:15px;line-height:1.85;color:var(--text-mid);margin-bottom:18px;}
+.about-body p strong{color:var(--text);font-weight:600;}
+.about-body p .hl{color:var(--blue);font-weight:500;}
+.about-card{
+  background:var(--bg);border:1px solid var(--border);border-radius:12px;
+  padding:24px;position:relative;overflow:hidden;
 }
-
-.about-grid{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:60px;align-items:center;
+.about-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  background:linear-gradient(90deg,var(--ecg),var(--blue));
 }
-
-.about-text p{
-  font-size:16px;line-height:1.8;
-  color:var(--text-dim);margin-bottom:20px;
+.mc-label{
+  font-family:'Space Mono',monospace;font-size:10px;letter-spacing:2px;
+  color:var(--ecg);margin-bottom:8px;display:block;
 }
-.about-text p strong{color:var(--white);font-weight:500;}
-.about-text p .hl{color:var(--cyan);}
-
-.about-visual{
-  position:relative;
-  height:360px;
+#mini-ecg{width:100%;height:80px;display:block;border-radius:4px;}
+.about-vitals{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px;}
+.vital{
+  background:var(--panel);border:1px solid var(--border);border-radius:8px;
+  padding:12px 14px;display:flex;align-items:center;gap:10px;
 }
+.vital-icon{font-size:18px;}
+.vital-val{font-family:'Space Mono',monospace;font-size:15px;font-weight:700;color:var(--blue);display:block;}
+.vital-lbl{font-size:10px;color:var(--text-dim);letter-spacing:.5px;}
 
-.heart-ring{
-  position:absolute;
-  border-radius:50%;
-  border:1px solid;
-  top:50%;left:50%;
-  transform:translate(-50%,-50%);
-  animation:ringPulse 3s ease-in-out infinite;
-}
-.ring1{width:220px;height:220px;border-color:rgba(232,41,58,0.5);}
-.ring2{width:300px;height:300px;border-color:rgba(232,41,58,0.25);animation-delay:.5s;}
-.ring3{width:360px;height:360px;border-color:rgba(232,41,58,0.1);animation-delay:1s;}
-
-@keyframes ringPulse{
-  0%,100%{transform:translate(-50%,-50%) scale(1);opacity:1;}
-  50%{transform:translate(-50%,-50%) scale(1.04);opacity:0.6;}
-}
-
-.heart-center{
-  position:absolute;
-  top:50%;left:50%;transform:translate(-50%,-50%);
-  width:100px;height:100px;
-  background:radial-gradient(circle,rgba(232,41,58,0.3),transparent);
-  border-radius:50%;
-  display:flex;align-items:center;justify-content:center;
-}
-.heart-icon{font-size:42px;animation:heartbeat 1.2s ease-in-out infinite;}
-
-@keyframes heartbeat{
-  0%,100%{transform:scale(1);}
-  14%{transform:scale(1.15);}
-  28%{transform:scale(1);}
-  42%{transform:scale(1.1);}
-  56%{transform:scale(1);}
-}
-
-/* ─── ARCHITECTURE SECTION ─── */
-#arch{background:var(--dark);}
-
-.arch-flow{
-  margin-top:48px;
-  display:flex;flex-direction:column;gap:0;
-  max-width:700px;margin-left:auto;margin-right:auto;
-}
-
+/* ── ARCH ── */
+#arch{background:var(--bg2);}
+.arch-flow{display:flex;flex-direction:column;max-width:720px;margin:40px auto 0;}
 .arch-node{
-  display:flex;align-items:center;gap:20px;
-  padding:18px 24px;
-  background:var(--panel);
-  border:1px solid var(--border);
-  border-radius:6px;
-  position:relative;
-  transition:border-color .2s, transform .2s;
+  display:grid;grid-template-columns:44px 1fr;gap:18px;align-items:start;
+  background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:18px 22px;
+  transition:border-color .2s,box-shadow .2s,transform .2s;
 }
-.arch-node:hover{border-color:rgba(232,41,58,0.5);transform:translateX(6px);}
+.arch-node:hover{border-color:rgba(0,151,167,0.4);box-shadow:var(--shadow);transform:translateX(6px);}
+.arch-node.final{border-color:rgba(0,230,118,0.4);border-left:3px solid var(--ecg);}
+.arch-arrow{display:flex;justify-content:flex-start;padding-left:21px;margin:3px 0;}
+.arch-arrow svg{color:var(--ecg);}
+.node-ico{
+  width:44px;height:44px;min-width:44px;background:var(--blue-light);
+  border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px;
+}
+.node-tag{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--cyan);text-transform:uppercase;margin-bottom:4px;}
+.node-txt{font-size:14px;color:var(--text-mid);line-height:1.5;}
+.node-txt strong{color:var(--text);font-weight:600;}
 
-.arch-connector{
-  width:2px;height:28px;
-  background:linear-gradient(var(--red),rgba(232,41,58,0.2));
-  margin:0 auto;margin-left:36px;
+/* ── METRICS ── */
+#metrics{background:var(--panel);}
+.metrics-top{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:40px;}
+.mcard{
+  background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:28px 20px;
+  text-align:center;transition:all .2s;position:relative;overflow:hidden;
 }
+.mcard::after{
+  content:'';position:absolute;bottom:0;left:0;right:0;height:3px;
+  background:linear-gradient(90deg,transparent,var(--ecg),transparent);opacity:0;transition:opacity .2s;
+}
+.mcard:hover{box-shadow:var(--shadow-lg);transform:translateY(-3px);}
+.mcard:hover::after{opacity:1;}
+.mcard-val{font-family:'Space Mono',monospace;font-size:32px;font-weight:700;color:var(--blue);display:block;margin-bottom:6px;}
+.mcard-val em{color:var(--ecg);font-style:normal;}
+.mcard-name{font-size:10px;letter-spacing:2px;color:var(--text-dim);text-transform:uppercase;}
+.f1-bands{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:20px;}
+.fband{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:22px;}
+.fband-head{
+  font-family:'Space Mono',monospace;font-size:10px;letter-spacing:2px;
+  text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:8px;
+}
+.fband-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.fband-item{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:5px 0;border-bottom:1px solid var(--border);font-size:13px;color:var(--text-mid);
+}
+.fband-item:last-child{border-bottom:none;}
+.fband-item span{font-family:'Space Mono',monospace;font-size:12px;font-weight:700;}
 
-.node-icon{
-  width:40px;height:40px;min-width:40px;
-  border-radius:8px;
-  background:rgba(232,41,58,0.12);
-  display:flex;align-items:center;justify-content:center;
-  font-size:18px;
-}
-.node-label{
-  font-family:'Space Mono',monospace;
-  font-size:12px;color:var(--red-soft);
-  letter-spacing:1px;margin-bottom:3px;
-}
-.node-desc{font-size:14px;color:var(--text-dim);line-height:1.4;}
-.node-desc strong{color:var(--white);font-weight:500;}
-
-/* ─── METRICS SECTION ─── */
-#metrics{
-  background:var(--dark2);
-  border-top:1px solid var(--border);
-  border-bottom:1px solid var(--border);
-}
-
-.metrics-grid{
-  display:grid;
-  grid-template-columns:repeat(4,1fr);
-  gap:2px;
-  margin-top:48px;
-  border:1px solid var(--border);
-  border-radius:8px;overflow:hidden;
-}
-
-.metric-card{
-  background:var(--panel);
-  padding:32px 24px;
-  text-align:center;
-  position:relative;overflow:hidden;
-  transition:background .2s;
-}
-.metric-card:hover{background:rgba(232,41,58,0.06);}
-.metric-card::before{
-  content:'';
-  position:absolute;top:0;left:0;right:0;height:2px;
-  background:linear-gradient(90deg,transparent,var(--red),transparent);
-  opacity:0;transition:opacity .2s;
-}
-.metric-card:hover::before{opacity:1;}
-
-.metric-val{
-  font-family:'Space Mono',monospace;
-  font-size:36px;font-weight:700;
-  color:var(--white);
-  display:block;margin-bottom:8px;
-}
-.metric-val em{color:var(--red);font-style:normal;}
-.metric-name{
-  font-size:12px;letter-spacing:2px;
-  color:var(--text-dim);text-transform:uppercase;
-}
-
-/* ─── CONDITIONS SECTION ─── */
-#conditions{background:var(--dark);}
-
-.conditions-intro{
-  font-size:16px;line-height:1.7;
-  color:var(--text-dim);max-width:640px;
-  margin-bottom:48px;
-}
-
-.cond-grid{
-  display:grid;
-  grid-template-columns:repeat(auto-fill,minmax(240px,1fr));
-  gap:12px;
-  margin-top:32px;
-}
-
+/* ── CONDITIONS ── */
+#conditions{background:var(--bg2);}
+.cond-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px;margin-top:32px;}
 .cond-card{
-  background:var(--panel);
-  border:1px solid var(--border);
-  border-radius:6px;
-  padding:16px 20px;
-  display:flex;align-items:center;gap:14px;
-  transition:all .2s;
-  cursor:default;
+  background:var(--panel);border:1px solid var(--border);border-radius:8px;
+  padding:14px 16px;display:flex;align-items:flex-start;gap:12px;
+  transition:all .2s;cursor:default;
 }
-.cond-card:hover{
-  border-color:rgba(232,41,58,0.4);
-  background:rgba(232,41,58,0.05);
-  transform:translateY(-2px);
-}
-
-.cond-abbr{
-  font-family:'Space Mono',monospace;
-  font-size:11px;font-weight:700;
-  color:var(--red-soft);
-  min-width:52px;
-  letter-spacing:1px;
-}
-
+.cond-card:hover{border-color:rgba(0,151,167,0.35);box-shadow:var(--shadow);transform:translateY(-2px);}
+.cond-card.danger{border-left:3px solid var(--red-soft);}
+.cond-abbr{font-family:'Space Mono',monospace;font-size:11px;font-weight:700;color:var(--blue);min-width:50px;letter-spacing:.5px;padding-top:1px;}
 .cond-info{flex:1;}
-.cond-name{font-size:13px;color:var(--text);margin-bottom:2px;}
+.cond-name{font-size:12px;color:var(--text);margin-bottom:2px;font-weight:500;}
 .cond-vn{font-size:11px;color:var(--text-dim);}
+.dbadge{
+  display:inline-block;margin-top:4px;font-size:9px;letter-spacing:.5px;
+  background:rgba(198,40,40,0.08);border:1px solid rgba(198,40,40,0.2);
+  color:var(--red);padding:1px 7px;border-radius:100px;
+}
+.cond-f1-wrap{text-align:right;min-width:44px;}
+.cond-f1-val{font-family:'Space Mono',monospace;font-size:12px;font-weight:700;}
+.fbar{width:40px;height:3px;background:var(--border2);border-radius:2px;margin-top:5px;overflow:hidden;}
+.fbar-fill{height:100%;border-radius:2px;transition:width .8s ease;}
 
-.cond-f1{
-  font-family:'Space Mono',monospace;
-  font-size:12px;
-  color:var(--text-dim);
-  text-align:right;
+/* ── PIPELINE ── */
+#pipeline{background:var(--panel);}
+.pipe-row{display:grid;grid-template-columns:repeat(5,1fr);gap:0;margin-top:48px;position:relative;}
+.pipe-row::after{
+  content:'';position:absolute;top:28px;left:calc(10% + 16px);right:calc(10% + 16px);
+  height:2px;background:linear-gradient(90deg,var(--ecg),rgba(0,230,118,0.2));z-index:0;
 }
-
-.f1-bar{
-  width:48px;height:3px;
-  background:rgba(255,255,255,0.08);
-  border-radius:2px;margin-top:4px;
-  overflow:hidden;
-}
-.f1-fill{
-  height:100%;border-radius:2px;
-  background:var(--red);
-  transition:width .6s ease;
-}
-.f1-fill.good{background:var(--cyan);}
-.f1-fill.ok{background:#f0a500;}
-
-.danger-badge{
-  font-size:9px;
-  background:rgba(232,41,58,0.15);
-  border:1px solid rgba(232,41,58,0.3);
-  color:var(--red-soft);
-  padding:2px 7px;
-  border-radius:100px;
-  display:inline-block;margin-top:3px;
-}
-
-/* ─── PIPELINE ─── */
-#pipeline{
-  background:var(--dark2);
-  border-top:1px solid var(--border);
-}
-
-.pipeline-steps{
-  display:grid;
-  grid-template-columns:repeat(5,1fr);
-  gap:0;
-  margin-top:48px;
-  position:relative;
-}
-.pipeline-steps::before{
-  content:'';
-  position:absolute;
-  top:28px;left:10%;right:10%;height:1px;
-  background:linear-gradient(90deg,transparent,var(--red),var(--red),transparent);
-  opacity:0.3;
-}
-
-.pipe-step{text-align:center;padding:0 10px;}
+.pipe-col{text-align:center;padding:0 8px;position:relative;z-index:1;}
 .pipe-num{
-  width:56px;height:56px;
-  border-radius:50%;
-  border:2px solid rgba(232,41,58,0.4);
-  background:var(--dark3);
-  display:flex;align-items:center;justify-content:center;
-  font-family:'Space Mono',monospace;
-  font-size:18px;color:var(--red);
-  margin:0 auto 16px;
-  position:relative;z-index:1;
-  transition:all .2s;
+  width:56px;height:56px;border-radius:50%;border:2px solid var(--ecg);background:var(--panel);
+  display:flex;align-items:center;justify-content:center;font-family:'Space Mono',monospace;
+  font-size:17px;color:var(--ecg);margin:0 auto 14px;
+  box-shadow:0 0 0 6px rgba(0,230,118,0.08);transition:all .25s;
 }
-.pipe-step:hover .pipe-num{
-  background:rgba(232,41,58,0.15);
-  border-color:var(--red);
-  box-shadow:0 0 20px var(--red-glow);
-}
-.pipe-title{font-size:13px;font-weight:600;color:var(--white);margin-bottom:6px;}
-.pipe-desc{font-size:12px;color:var(--text-dim);line-height:1.5;}
+.pipe-col:hover .pipe-num{background:var(--ecg);color:#0d1f12;box-shadow:0 0 20px rgba(0,230,118,0.4);}
+.pipe-name{font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px;}
+.pipe-desc{font-size:11px;color:var(--text-dim);line-height:1.55;}
 
-/* ─── FOOTER ─── */
+/* ── CTA ── */
+#cta{background:linear-gradient(135deg,#1565c0 0%,#0d47a1 100%);padding:80px 48px;text-align:center;}
+.cta-title{font-family:'Syne',sans-serif;font-size:clamp(28px,4vw,50px);font-weight:800;color:#fff;margin-bottom:14px;letter-spacing:-1px;}
+.cta-sub{font-size:16px;color:rgba(255,255,255,0.65);margin-bottom:36px;font-weight:300;}
+.btn-light{
+  display:inline-flex;align-items:center;gap:12px;background:#fff;color:var(--blue);
+  font-family:'Syne',sans-serif;font-size:15px;font-weight:800;
+  padding:16px 44px;border-radius:6px;text-decoration:none;
+  box-shadow:0 4px 24px rgba(0,0,0,0.2);transition:transform .2s,box-shadow .2s;
+}
+.btn-light:hover{transform:translateY(-3px);box-shadow:0 10px 36px rgba(0,0,0,0.3);}
+.btn-light .arr{
+  width:22px;height:22px;background:var(--blue-light);border-radius:50%;
+  display:flex;align-items:center;justify-content:center;font-size:12px;transition:transform .2s;
+}
+.btn-light:hover .arr{transform:translateX(4px);}
+
+/* ── FOOTER ── */
 footer{
-  background:var(--dark);
-  border-top:1px solid var(--border);
-  padding:40px;
-  text-align:center;
+  background:var(--text);padding:36px 48px;
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:20px;
 }
+.foot-logo{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:#fff;}
+.foot-logo em{color:var(--ecg);font-style:normal;}
+.foot-info{font-size:13px;color:rgba(255,255,255,0.45);line-height:1.7;}
+.foot-info a{color:rgba(0,230,118,0.7);text-decoration:none;}
+.foot-ver{font-family:'Space Mono',monospace;font-size:10px;letter-spacing:2px;color:rgba(255,255,255,0.2);text-transform:uppercase;}
 
-.footer-logo{
-  font-family:'Syne',sans-serif;
-  font-size:28px;font-weight:800;
-  color:var(--white);margin-bottom:12px;
-}
-.footer-logo span{color:var(--red);}
+/* ── ANIMATIONS ── */
+@keyframes fadeUp{from{opacity:0;transform:translateY(28px);}to{opacity:1;transform:translateY(0);}}
+.reveal{opacity:0;transform:translateY(28px);transition:all .7s cubic-bezier(.22,1,.36,1);}
+.reveal.vis{opacity:1;transform:none;}
 
-.footer-info{
-  font-size:13px;color:var(--text-dim);
-  line-height:1.8;
-}
-.footer-info a{color:var(--cyan);text-decoration:none;}
-
-.footer-version{
-  margin-top:24px;
-  font-family:'Space Mono',monospace;
-  font-size:11px;letter-spacing:2px;color:rgba(100,140,160,0.5);
-}
-
-/* ─── ANIMATIONS ─── */
-@keyframes fadeUp{
-  from{opacity:0;transform:translateY(30px);}
-  to{opacity:1;transform:translateY(0);}
-}
-
-.reveal{opacity:0;transform:translateY(32px);transition:all .7s cubic-bezier(.22,1,.36,1);}
-.reveal.visible{opacity:1;transform:none;}
-
-/* ─── SCROLLBAR ─── */
-::-webkit-scrollbar{width:4px;}
-::-webkit-scrollbar-track{background:var(--dark);}
-::-webkit-scrollbar-thumb{background:var(--red);border-radius:2px;}
-
-/* ─── RESPONSIVE ─── */
-@media(max-width:768px){
-  nav{padding:14px 20px;}
+@media(max-width:860px){
+  nav{padding:0 20px;}
   .nav-links{display:none;}
-  section{padding:70px 20px;}
+  section{padding:64px 20px;}
   .about-grid{grid-template-columns:1fr;}
-  .about-visual{display:none;}
-  .metrics-grid{grid-template-columns:repeat(2,1fr);}
-  .pipeline-steps{grid-template-columns:1fr;gap:24px;}
-  .pipeline-steps::before{display:none;}
-  .hero-stats{gap:24px;flex-wrap:wrap;}
+  .metrics-top{grid-template-columns:repeat(2,1fr);}
+  .f1-bands{grid-template-columns:1fr;}
+  .pipe-row{grid-template-columns:1fr 1fr;gap:24px;}
+  .pipe-row::after{display:none;}
+  footer{flex-direction:column;text-align:center;}
+  .hero-stats{flex-wrap:wrap;}
+  .hstat{min-width:45%;}
 }
-
 @media(max-width:480px){
-  .metrics-grid{grid-template-columns:1fr;}
+  .metrics-top{grid-template-columns:1fr;}
 }
 </style>
 </head>
@@ -601,8 +350,8 @@ footer{
 <!-- NAV -->
 <nav>
   <div class="nav-logo">
-    <div class="pulse"></div>
-    ECG AI v4.0
+    <div class="live-dot"></div>
+    ECG&nbsp;AI&nbsp;·&nbsp;V4.0
   </div>
   <div class="nav-links">
     <a href="#about">Giới thiệu</a>
@@ -615,53 +364,40 @@ footer{
 
 <!-- HERO -->
 <section id="hero">
-  <div class="grid-bg"></div>
-
-  <div class="hero-content">
-    <div class="hero-badge">
-      <svg viewBox="0 0 10 10"><circle cx="5" cy="5" r="5"/></svg>
-      Phiên bản V4.0 — Tháng 3, 2026
-    </div>
-
+  <div class="hero-inner">
+    <div class="hero-chip">🫀 PhysioNet Challenge 2020 · Phiên bản V4.0</div>
     <h1 class="hero-title">
-      <div class="line1">Chẩn Đoán</div>
-      <div class="line2">Tim Mạch AI</div>
+      <div class="t1">Hệ Thống Hỗ Trợ</div>
+      <div class="t2">Chẩn Đoán Tim Mạch AI</div>
     </h1>
-
-    <p class="hero-sub">
-      Mạng <em>Multi-scale CNN + Transformer</em> phân loại đồng thời
-      <em>27 bệnh lý tim mạch</em> từ tín hiệu ECG 12 chuyển đạo
-      với độ chính xác lâm sàng cao.
+    <p class="hero-desc">
+      Ứng dụng mạng <strong>Multi-scale CNN + Transformer</strong> phân loại đồng thời
+      <strong>27 bệnh lý tim mạch</strong> từ tín hiệu ECG 12 chuyển đạo.
+      Huấn luyện trên <strong>37,749 bản ghi</strong> lâm sàng chuẩn quốc tế.
     </p>
-
     <a href="https://huggingface.co/spaces/huynhtrongngu/ECGDoan2" target="_blank" class="btn-demo">
       🚀 MỞ DEMO NGAY
-      <div class="arrow">›</div>
+      <div class="arr">›</div>
     </a>
-
     <div class="hero-stats">
-      <div class="stat">
-        <span class="stat-val">37<span>,749</span></span>
-        <span class="stat-label">Bản ghi ECG</span>
-      </div>
-      <div class="stat">
-        <span class="stat-val">27</span>
-        <span class="stat-label">Loại bệnh</span>
-      </div>
-      <div class="stat">
-        <span class="stat-val">0<span>.9229</span></span>
-        <span class="stat-label">AUC Score</span>
-      </div>
-      <div class="stat">
-        <span class="stat-val">20<span>M</span></span>
-        <span class="stat-label">Parameters</span>
-      </div>
+      <div class="hstat"><span class="hstat-val">37<sup>,749</sup></span><span class="hstat-lbl">Bản ghi ECG</span></div>
+      <div class="hstat"><span class="hstat-val">27</span><span class="hstat-lbl">Loại bệnh lý</span></div>
+      <div class="hstat"><span class="hstat-val">0.9229</span><span class="hstat-lbl">AUC Score</span></div>
+      <div class="hstat"><span class="hstat-val">20M</span><span class="hstat-lbl">Parameters</span></div>
+      <div class="hstat"><span class="hstat-val">500<sup>Hz</sup></span><span class="hstat-lbl">Sample Rate</span></div>
     </div>
   </div>
 
-  <!-- Animated ECG line -->
-  <div class="ecg-wrapper">
+  <!-- Medical ECG monitor strip -->
+  <div class="monitor-wrap">
+    <div class="monitor-grid"></div>
+    <div class="monitor-scanline"></div>
     <canvas id="ecg-canvas"></canvas>
+    <div class="monitor-label">LEAD II · 500Hz · 12-CHANNEL ECG</div>
+    <div class="monitor-hr">
+      <span class="big" id="hr-num">72</span>
+      BPM
+    </div>
   </div>
 </section>
 
@@ -669,25 +405,23 @@ footer{
 <section id="about">
   <div class="container">
     <div class="about-grid reveal">
-      <div class="about-text">
-        <div class="section-tag">Giới Thiệu</div>
-        <h2 class="section-title">Vì sao dự án này quan trọng?</h2>
-        <p>
-          <strong>Điện tâm đồ (ECG) 12 chuyển đạo</strong> là tiêu chuẩn vàng trong chẩn đoán tim mạch. Tuy nhiên, việc phân tích đồng thời 12 kênh tín hiệu phức tạp đòi hỏi kinh nghiệm chuyên sâu, dẫn đến <strong>thiếu nhất quán</strong> ở tuyến y tế cơ sở.
-        </p>
-        <p>
-          Hệ thống này sử dụng kiến trúc <span class="hl">Multi-scale CNN kết hợp Transformer</span> — được huấn luyện trên bộ dữ liệu lâm sàng <strong>PhysioNet Challenge 2020</strong> với 37,749 bản ghi — để hỗ trợ bác sĩ chẩn đoán nhanh và chính xác hơn.
-        </p>
-        <p>
-          Đặc biệt, hệ thống ưu tiên <strong>an toàn lâm sàng</strong>: đảm bảo <span class="hl">Recall ≥ 0.75</span> cho 6 bệnh nguy hiểm gồm Rung nhĩ (AF), Cuồng nhĩ (AFL), LBBB, PVC, LQT, VPB — không để sót ca bệnh quan trọng.
-        </p>
+      <div class="about-body">
+        <div class="sec-tag">Giới Thiệu Dự Án</div>
+        <h2 class="sec-title">AI hỗ trợ bác sĩ đọc ECG chính xác hơn</h2>
+        <p><strong>Điện tâm đồ (ECG) 12 chuyển đạo</strong> là tiêu chuẩn vàng trong chẩn đoán tim mạch. Tuy nhiên, phân tích đồng thời 12 kênh tín hiệu đòi hỏi kinh nghiệm chuyên sâu, dẫn đến thiếu nhất quán ở tuyến y tế cơ sở.</p>
+        <p>Mô hình sử dụng kiến trúc <span class="hl">Multi-scale CNN kết hợp Transformer</span> để bắt đồng thời pattern ngắn hạn (sóng QRS) lẫn phụ thuộc dài hạn (ST segment, nhịp tổng thể) trên toàn bộ 10 giây tín hiệu.</p>
+        <p>Đặc biệt ưu tiên <strong>an toàn lâm sàng</strong>: đảm bảo <span class="hl">Recall ≥ 0.75</span> cho 6 bệnh nguy hiểm — <span class="hl">AF, AFL, LBBB, PVC, LQT, VPB</span> — không để sót ca bệnh quan trọng.</p>
       </div>
-      <div class="about-visual">
-        <div class="heart-ring ring3"></div>
-        <div class="heart-ring ring2"></div>
-        <div class="heart-ring ring1"></div>
-        <div class="heart-center">
-          <span class="heart-icon">❤️</span>
+      <div>
+        <div class="about-card">
+          <span class="mc-label">LEAD II · REAL-TIME MONITOR</span>
+          <canvas id="mini-ecg" height="80"></canvas>
+          <div class="about-vitals">
+            <div class="vital"><span class="vital-icon">💓</span><div><span class="vital-val">72</span><span class="vital-lbl">BPM · HR</span></div></div>
+            <div class="vital"><span class="vital-icon">📈</span><div><span class="vital-val">0.92</span><span class="vital-lbl">AUC Score</span></div></div>
+            <div class="vital"><span class="vital-icon">🏥</span><div><span class="vital-val">37K+</span><span class="vital-lbl">Training ECGs</span></div></div>
+            <div class="vital"><span class="vital-icon">🎯</span><div><span class="vital-val">27</span><span class="vital-lbl">Bệnh lý</span></div></div>
+          </div>
         </div>
       </div>
     </div>
@@ -697,60 +431,33 @@ footer{
 <!-- ARCHITECTURE -->
 <section id="arch">
   <div class="container reveal">
-    <div class="section-tag">Kiến Trúc</div>
-    <h2 class="section-title">Mô hình V4 — ~20M tham số</h2>
-    <p style="color:var(--text-dim);font-size:15px;max-width:560px;line-height:1.7;margin-bottom:8px;">
-      Pipeline xử lý tín hiệu đầu vào (12, 4096) qua 4 tầng CNN đa tỉ lệ,
-      sau đó Transformer Encoder 8 layers để học ngữ cảnh toàn cục.
-    </p>
-
+    <div class="sec-tag">Kiến Trúc Mô Hình</div>
+    <h2 class="sec-title">Multi-scale CNN + Transformer — ~20M tham số</h2>
+    <p style="color:var(--text-mid);font-size:15px;max-width:560px;line-height:1.7;">Tín hiệu (12, 4096) qua 4 tầng CNN đa tỉ lệ song song, rồi Transformer 8 lớp học ngữ cảnh toàn cục.</p>
     <div class="arch-flow">
       <div class="arch-node">
-        <div class="node-icon">📥</div>
-        <div>
-          <div class="node-label">Input</div>
-          <div class="node-desc"><strong>Tensor (12, 4096)</strong> — 12 chuyển đạo × 4096 time-steps @ 500Hz</div>
-        </div>
+        <div class="node-ico">📥</div>
+        <div><div class="node-tag">Input</div><div class="node-txt"><strong>Tensor (12, 4096)</strong> — 12 chuyển đạo × 4096 time-steps @ 500Hz</div></div>
       </div>
-      <div class="arch-connector"></div>
+      <div class="arch-arrow"><svg width="2" height="22" viewBox="0 0 2 22"><line x1="1" y1="0" x2="1" y2="17" stroke="currentColor" stroke-width="2"/><polygon points="1,22 -2,15 4,15" fill="currentColor"/></svg></div>
       <div class="arch-node">
-        <div class="node-icon">🔀</div>
-        <div>
-          <div class="node-label">Multi-Scale CNN × 4 Blocks</div>
-          <div class="node-desc">4 nhánh song song: <strong>kernel 3, 9, 19 + AvgPool</strong> → 12→128→256→512→512 channels</div>
-        </div>
+        <div class="node-ico">🔀</div>
+        <div><div class="node-tag">Multi-Scale CNN × 4 Blocks</div><div class="node-txt">4 nhánh song song: <strong>kernel 3, 9, 19 + AvgPool</strong> → channels 12→128→256→512→512. Residual + GroupNorm + GELU.</div></div>
       </div>
-      <div class="arch-connector"></div>
+      <div class="arch-arrow"><svg width="2" height="22" viewBox="0 0 2 22"><line x1="1" y1="0" x2="1" y2="17" stroke="currentColor" stroke-width="2"/><polygon points="1,22 -2,15 4,15" fill="currentColor"/></svg></div>
       <div class="arch-node">
-        <div class="node-icon">📐</div>
-        <div>
-          <div class="node-label">Linear Projection + Positional Encoding</div>
-          <div class="node-desc">512 → <strong>384 dims</strong>, Sinusoidal PE max_len=1024</div>
-        </div>
+        <div class="node-ico">📐</div>
+        <div><div class="node-tag">Linear Projection + Positional Encoding</div><div class="node-txt">512 → <strong>384 dims</strong>, Sinusoidal PE max_len=1024, LayerNorm chuẩn hóa đầu vào Transformer.</div></div>
       </div>
-      <div class="arch-connector"></div>
+      <div class="arch-arrow"><svg width="2" height="22" viewBox="0 0 2 22"><line x1="1" y1="0" x2="1" y2="17" stroke="currentColor" stroke-width="2"/><polygon points="1,22 -2,15 4,15" fill="currentColor"/></svg></div>
       <div class="arch-node">
-        <div class="node-icon">🤖</div>
-        <div>
-          <div class="node-label">Transformer Encoder × 8 Layers</div>
-          <div class="node-desc"><strong>8 heads</strong>, d=384, ff=1536, Pre-LayerNorm, GELU — học phụ thuộc dài hạn</div>
-        </div>
+        <div class="node-ico">🤖</div>
+        <div><div class="node-tag">Transformer Encoder × 8 Layers</div><div class="node-txt"><strong>8 heads</strong>, d=384, ff=1536, Pre-LayerNorm, GELU. Học phụ thuộc dài hạn trên toàn tín hiệu 10 giây.</div></div>
       </div>
-      <div class="arch-connector"></div>
-      <div class="arch-node">
-        <div class="node-icon">🎯</div>
-        <div>
-          <div class="node-label">Classification Head</div>
-          <div class="node-desc">GlobalAvgPool → LN → Dropout → <strong>Linear(512)</strong> → GELU → <strong>Linear(27)</strong> → Sigmoid</div>
-        </div>
-      </div>
-      <div class="arch-connector"></div>
-      <div class="arch-node" style="border-color:rgba(232,41,58,0.5);background:rgba(232,41,58,0.07);">
-        <div class="node-icon">📊</div>
-        <div>
-          <div class="node-label">Output</div>
-          <div class="node-desc"><strong>27 xác suất bệnh lý</strong> — Ngưỡng tối ưu F1+Recall per-class</div>
-        </div>
+      <div class="arch-arrow"><svg width="2" height="22" viewBox="0 0 2 22"><line x1="1" y1="0" x2="1" y2="17" stroke="currentColor" stroke-width="2"/><polygon points="1,22 -2,15 4,15" fill="currentColor"/></svg></div>
+      <div class="arch-node final">
+        <div class="node-ico">🎯</div>
+        <div><div class="node-tag">Classification Head → Output</div><div class="node-txt">GlobalAvgPool → LN → Dropout → <strong>Linear(512)</strong> → GELU → <strong>Linear(27)</strong> → Sigmoid → <strong>27 xác suất bệnh lý</strong></div></div>
       </div>
     </div>
   </div>
@@ -759,54 +466,41 @@ footer{
 <!-- METRICS -->
 <section id="metrics">
   <div class="container reveal">
-    <div class="section-tag">Kết Quả</div>
-    <h2 class="section-title">Đánh giá trên Test set (TTA 5×)</h2>
-    <p style="color:var(--text-dim);font-size:15px;max-width:600px;line-height:1.7;margin-bottom:0;">
-      Chiến lược ngưỡng <strong style="color:var(--white);">F1+Recall</strong> được khuyến nghị sử dụng —
-      đảm bảo Recall ≥ 0.75 cho các bệnh nguy hiểm.
-    </p>
-    <div class="metrics-grid">
-      <div class="metric-card">
-        <span class="metric-val">0<em>.</em>4984</span>
-        <div class="metric-name">Val F1 (Best epoch)</div>
-      </div>
-      <div class="metric-card">
-        <span class="metric-val">0<em>.</em>9229</span>
-        <div class="metric-name">Val AUC</div>
-      </div>
-      <div class="metric-card">
-        <span class="metric-val">0<em>.</em>4884</span>
-        <div class="metric-name">Test Macro F1</div>
-      </div>
-      <div class="metric-card">
-        <span class="metric-val">0<em>.</em>9211</span>
-        <div class="metric-name">Test AUC</div>
-      </div>
+    <div class="sec-tag">Kết Quả Đánh Giá</div>
+    <h2 class="sec-title">Test set · TTA 5× · Chiến lược F1+Recall</h2>
+    <div class="metrics-top">
+      <div class="mcard"><span class="mcard-val">0<em>.</em>4984</span><div class="mcard-name">Val F1 · Best Epoch</div></div>
+      <div class="mcard"><span class="mcard-val">0<em>.</em>9229</span><div class="mcard-name">Val AUC Score</div></div>
+      <div class="mcard"><span class="mcard-val">0<em>.</em>4884</span><div class="mcard-name">Test Macro F1</div></div>
+      <div class="mcard"><span class="mcard-val">0<em>.</em>9211</span><div class="mcard-name">Test AUC Score</div></div>
     </div>
-
-    <div style="margin-top:48px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;">
-      <div style="background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:24px;">
-        <div style="font-family:'Space Mono',monospace;font-size:11px;color:var(--red);letter-spacing:2px;margin-bottom:12px;">RẤT TỐT — F1 ≥ 0.8</div>
-        <div id="very-good-list" style="font-size:13px;color:var(--text-dim);line-height:2;">
-          PR <span style="color:var(--cyan);">0.973</span> · SNR <span style="color:var(--cyan);">0.895</span> · AF <span style="color:var(--cyan);">0.869</span><br>
-          LBBB <span style="color:var(--cyan);">0.831</span> · RBBB <span style="color:var(--cyan);">0.820</span> · STach <span style="color:var(--cyan);">0.816</span>
-        </div>
+    <div class="f1-bands">
+      <div class="fband">
+        <div class="fband-head"><div class="fband-dot" style="background:#00c853;"></div><span style="color:#00833a;">Rất tốt — F1 ≥ 0.8</span></div>
+        <div class="fband-item">PR — Khoảng PR<span style="color:#00c853;">0.973</span></div>
+        <div class="fband-item">SNR — Nhịp xoang BT<span style="color:#00c853;">0.895</span></div>
+        <div class="fband-item">AF — Rung nhĩ<span style="color:#00c853;">0.869</span></div>
+        <div class="fband-item">LBBB — Blốc nhánh T<span style="color:#00c853;">0.831</span></div>
+        <div class="fband-item">RBBB — Blốc nhánh P<span style="color:#00c853;">0.820</span></div>
+        <div class="fband-item">STach — Nhịp nhanh xoang<span style="color:#00c853;">0.816</span></div>
       </div>
-      <div style="background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:24px;">
-        <div style="font-family:'Space Mono',monospace;font-size:11px;color:#f0a500;letter-spacing:2px;margin-bottom:12px;">TỐT — F1 0.5~0.8</div>
-        <div style="font-size:13px;color:var(--text-dim);line-height:2;">
-          LAD 0.737 · LAnFB 0.732 · SB 0.672<br>
-          IAVB 0.663 · RAD 0.634 · AFL 0.565<br>
-          CRBBB 0.686 · IRBBB 0.574 · TAb 0.534
-        </div>
+      <div class="fband">
+        <div class="fband-head"><div class="fband-dot" style="background:#ff8f00;"></div><span style="color:#e65100;">Tốt — F1 0.5~0.8</span></div>
+        <div class="fband-item">LAD — Lệch trục T<span style="color:#ff8f00;">0.737</span></div>
+        <div class="fband-item">LAnFB — Blốc phân nhánh<span style="color:#ff8f00;">0.732</span></div>
+        <div class="fband-item">CRBBB — Blốc nhánh P HT<span style="color:#ff8f00;">0.686</span></div>
+        <div class="fband-item">SB — Nhịp chậm xoang<span style="color:#ff8f00;">0.672</span></div>
+        <div class="fband-item">IAVB — Blốc NTT độ 1<span style="color:#ff8f00;">0.663</span></div>
+        <div class="fband-item">AFL — Cuồng nhĩ<span style="color:#ff8f00;">0.565</span></div>
       </div>
-      <div style="background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:24px;">
-        <div style="font-family:'Space Mono',monospace;font-size:11px;color:var(--text-dim);letter-spacing:2px;margin-bottom:12px;">CẦN CẢI THIỆN — F1 &lt; 0.5</div>
-        <div style="font-size:13px;color:var(--text-dim);line-height:2;">
-          LQT 0.453 · Brady 0.431 · PAC 0.329<br>
-          VPB 0.290 · SVPB 0.269 · PVC 0.182<br>
-          SA 0.127 · LQRSV 0.222 · TInv 0.238
-        </div>
+      <div class="fband">
+        <div class="fband-head"><div class="fband-dot" style="background:#b0bec5;"></div><span style="color:#607d8b;">Cần cải thiện — F1 &lt; 0.5</span></div>
+        <div class="fband-item">LQT — QT kéo dài<span>0.453</span></div>
+        <div class="fband-item">Brady — Nhịp chậm<span>0.431</span></div>
+        <div class="fband-item">PAC — NGT nhĩ<span>0.329</span></div>
+        <div class="fband-item">VPB — Nhịp sớm thất<span>0.290</span></div>
+        <div class="fband-item">PVC — NGT thất<span>0.182</span></div>
+        <div class="fband-item">SA — RL nhịp xoang<span>0.127</span></div>
       </div>
     </div>
   </div>
@@ -815,12 +509,9 @@ footer{
 <!-- CONDITIONS -->
 <section id="conditions">
   <div class="container reveal">
-    <div class="section-tag">27 Bệnh Lý</div>
-    <h2 class="section-title">Danh sách chẩn đoán</h2>
-    <p class="conditions-intro">
-      Hệ thống phân loại đồng thời 27 bệnh lý tim mạch theo chuẩn SNOMED từ PhysioNet Challenge 2020.
-      Các bệnh có dấu ⚠️ áp dụng Recall constraint ≥ 0.75.
-    </p>
+    <div class="sec-tag">27 Bệnh Lý Tim Mạch</div>
+    <h2 class="sec-title">Danh sách chẩn đoán đầy đủ</h2>
+    <p style="color:var(--text-mid);font-size:15px;max-width:600px;line-height:1.7;margin-bottom:8px;">Phân loại theo chuẩn SNOMED-CT từ PhysioNet Challenge 2020. Viền đỏ = bệnh nguy hiểm, áp dụng <strong>Recall ≥ 0.75</strong>.</p>
     <div class="cond-grid" id="cond-grid"></div>
   </div>
 </section>
@@ -828,216 +519,185 @@ footer{
 <!-- PIPELINE -->
 <section id="pipeline">
   <div class="container reveal">
-    <div class="section-tag">Pipeline</div>
-    <h2 class="section-title">Quy trình xử lý</h2>
-
-    <div class="pipeline-steps">
-      <div class="pipe-step">
-        <div class="pipe-num">01</div>
-        <div class="pipe-title">Đọc file</div>
-        <div class="pipe-desc">wfdb.rdrecord() đọc .mat, parse SNOMED từ .hea</div>
-      </div>
-      <div class="pipe-step">
-        <div class="pipe-num">02</div>
-        <div class="pipe-title">Normalize</div>
-        <div class="pipe-desc">Chuẩn hóa mean/std từng chuyển đạo độc lập</div>
-      </div>
-      <div class="pipe-step">
-        <div class="pipe-num">03</div>
-        <div class="pipe-title">Crop/Pad</div>
-        <div class="pipe-desc">Center crop hoặc zero-pad về đúng 4096 mẫu</div>
-      </div>
-      <div class="pipe-step">
-        <div class="pipe-num">04</div>
-        <div class="pipe-title">Augment</div>
-        <div class="pipe-desc">Gaussian noise σ=0.03 + Amplitude scale ×0.85~1.15</div>
-      </div>
-      <div class="pipe-step">
-        <div class="pipe-num">05</div>
-        <div class="pipe-title">TTA 5×</div>
-        <div class="pipe-desc">1 clean + 5 augmented rounds → average predictions</div>
-      </div>
+    <div class="sec-tag">Quy Trình Xử Lý</div>
+    <h2 class="sec-title">5 bước từ tín hiệu đến chẩn đoán</h2>
+    <div class="pipe-row">
+      <div class="pipe-col"><div class="pipe-num">01</div><div class="pipe-name">Đọc file</div><div class="pipe-desc">wfdb.rdrecord() đọc .mat, parse mã SNOMED từ .hea</div></div>
+      <div class="pipe-col"><div class="pipe-num">02</div><div class="pipe-name">Normalize</div><div class="pipe-desc">Chuẩn hóa mean/std từng chuyển đạo độc lập</div></div>
+      <div class="pipe-col"><div class="pipe-num">03</div><div class="pipe-name">Crop/Pad</div><div class="pipe-desc">Center crop hoặc zero-pad về đúng 4096 mẫu</div></div>
+      <div class="pipe-col"><div class="pipe-num">04</div><div class="pipe-name">Augment</div><div class="pipe-desc">Gaussian noise σ=0.03 + Amplitude scale ×0.85~1.15</div></div>
+      <div class="pipe-col"><div class="pipe-num">05</div><div class="pipe-name">TTA 5×</div><div class="pipe-desc">1 clean + 5 augmented rounds → average predictions</div></div>
     </div>
+  </div>
+</section>
 
-    <div style="margin-top:64px;text-align:center;">
-      <p style="color:var(--text-dim);font-size:15px;margin-bottom:28px;">
-        Thực hiện bởi <strong style="color:var(--white);">Huỳnh Trọng Ngữ</strong> — Phiên bản V4.0 Multi-scale CNN + Transformer
-      </p>
-      <a href="https://huggingface.co/spaces/huynhtrongngu/ECGDoan2" target="_blank" class="btn-demo">
-        🫀 THỬ DEMO TRỰC TIẾP
-        <div class="arrow">›</div>
-      </a>
-    </div>
+<!-- CTA -->
+<section id="cta">
+  <div class="container">
+    <div class="cta-title">Thử nghiệm trực tiếp ngay bây giờ</div>
+    <div class="cta-sub">Upload file ECG .mat + .hea — nhận kết quả 27 bệnh lý trong vài giây</div>
+    <a href="https://huggingface.co/spaces/huynhtrongngu/ECGDoan2" target="_blank" class="btn-light">
+      🫀 MỞ DEMO TRÊN HUGGINGFACE
+      <div class="arr">›</div>
+    </a>
   </div>
 </section>
 
 <!-- FOOTER -->
 <footer>
-  <div class="footer-logo">ECG<span>AI</span></div>
-  <div class="footer-info">
-    Hệ thống hỗ trợ chẩn đoán bệnh lý tim mạch qua tín hiệu ECG 12 chuyển đạo<br>
-    Demo: <a href="https://huggingface.co/spaces/huynhtrongngu/ECGDoan2" target="_blank">huggingface.co/spaces/huynhtrongngu/ECGDoan2</a>
+  <div class="foot-logo">ECG<em>AI</em></div>
+  <div class="foot-info">
+    Thực hiện bởi <strong style="color:rgba(255,255,255,0.7)">Huỳnh Trọng Ngữ</strong><br>
+    <a href="https://huggingface.co/spaces/huynhtrongngu/ECGDoan2" target="_blank">huggingface.co/spaces/huynhtrongngu/ECGDoan2</a>
   </div>
-  <div class="footer-version">V4.0 — MULTI-SCALE CNN + TRANSFORMER — THÁNG 3, 2026</div>
+  <div class="foot-ver">V4.0 · Multi-scale CNN + Transformer · Tháng 3, 2026</div>
 </footer>
 
 <script>
-// ─── ECG CANVAS ANIMATION ───
-const canvas = document.getElementById('ecg-canvas');
-const ctx = canvas.getContext('2d');
-
-function resizeCanvas(){
-  canvas.width = canvas.offsetWidth;
-  canvas.height = canvas.offsetHeight;
-}
-resizeCanvas();
-window.addEventListener('resize', resizeCanvas);
-
-// ECG wave path (one heartbeat cycle)
-function ecgPoint(t){
-  // Baseline
-  let y = 0;
-  const cycle = t % 1;
-
-  if(cycle < 0.1){ // P wave
-    y = 0.15 * Math.sin(Math.PI * cycle / 0.1);
-  } else if(cycle < 0.18){ // PR segment
-    y = 0;
-  } else if(cycle < 0.20){ // Q wave
-    y = -0.1 * Math.sin(Math.PI * (cycle - 0.18) / 0.02);
-  } else if(cycle < 0.24){ // R wave (spike)
-    const r = (cycle - 0.20) / 0.04;
-    y = r < 0.5 ? r * 2 : (1 - r) * 2;
-    y = y * 1.2;
-  } else if(cycle < 0.27){ // S wave
-    y = -0.15 * Math.sin(Math.PI * (cycle - 0.24) / 0.03);
-  } else if(cycle < 0.40){ // ST segment
-    y = 0;
-  } else if(cycle < 0.55){ // T wave
-    y = 0.35 * Math.sin(Math.PI * (cycle - 0.40) / 0.15);
-  } else {
-    y = 0;
-  }
+// ── ECG WAVE FUNCTION (realistic heartbeat) ──
+function ecgY(t){
+  const c=((t%1)+1)%1; let y=0;
+  if(c<0.09)       y=0.12*Math.sin(Math.PI*c/0.09);
+  else if(c<0.17)  y=0;
+  else if(c<0.195) y=-0.08*Math.sin(Math.PI*(c-0.17)/0.025);
+  else if(c<0.225){const r=(c-0.195)/0.03;y=(r<0.5?r*2:(1-r)*2)*1.4;}
+  else if(c<0.255) y=-0.12*Math.sin(Math.PI*(c-0.225)/0.03);
+  else if(c<0.38)  y=0;
+  else if(c<0.52)  y=0.30*Math.sin(Math.PI*(c-0.38)/0.14);
+  else             y=0;
   return y;
 }
 
-let offset = 0;
-const speed = 0.003;
+// ── HERO ECG CANVAS ──
+const hC=document.getElementById('ecg-canvas');
+const hX=hC.getContext('2d');
+function resH(){hC.width=hC.offsetWidth||window.innerWidth;hC.height=hC.offsetHeight||210;}
+resH(); window.addEventListener('resize',resH);
 
-function drawECG(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
+let hOff=0;
+function drawHero(){
+  const W=hC.width,H=hC.height;
+  hX.clearRect(0,0,W,H);
+  const midY=H*0.42, amp=H*0.30, trail=0.62;
 
-  const W = canvas.width, H = canvas.height;
-  const midY = H * 0.45;
-  const amplitude = H * 0.35;
-  const steps = W;
-
-  // Glow effect
-  ctx.shadowColor = '#e8293a';
-  ctx.shadowBlur = 12;
-
-  // Gradient line
-  const grad = ctx.createLinearGradient(0,0,W,0);
-  grad.addColorStop(0,'rgba(232,41,58,0)');
-  grad.addColorStop(0.3,'rgba(232,41,58,0.8)');
-  grad.addColorStop(0.7,'rgba(232,41,58,0.8)');
-  grad.addColorStop(1,'rgba(232,41,58,0)');
-
-  ctx.beginPath();
-  ctx.strokeStyle = grad;
-  ctx.lineWidth = 2;
-  ctx.lineJoin = 'round';
-  ctx.lineCap = 'round';
-
-  for(let x=0; x<steps; x++){
-    const t = (x / W * 2.5) + offset;
-    const y = midY - ecgPoint(t) * amplitude;
-    if(x===0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
+  // Glow layer
+  hX.save();
+  hX.shadowColor='#00e676';hX.shadowBlur=22;
+  const g=hX.createLinearGradient(0,0,W*trail,0);
+  g.addColorStop(0,'rgba(0,230,118,0)');
+  g.addColorStop(0.06,'rgba(0,230,118,0.85)');
+  g.addColorStop(0.88,'rgba(0,230,118,0.85)');
+  g.addColorStop(1,'rgba(0,230,118,0)');
+  hX.strokeStyle=g; hX.lineWidth=2.5; hX.lineJoin='round'; hX.lineCap='round';
+  hX.beginPath();
+  for(let x=0;x<=W*trail;x++){
+    const t=(x/W*3)+hOff, y=midY-ecgY(t)*amp;
+    x===0?hX.moveTo(x,y):hX.lineTo(x,y);
   }
-  ctx.stroke();
+  hX.stroke(); hX.restore();
 
-  // Bright dot at current position (rightmost active point)
-  const dotX = W * 0.75;
-  const dotT = (dotX / W * 2.5) + offset;
-  const dotY = midY - ecgPoint(dotT) * amplitude;
+  // Bright head dot
+  const dx=W*trail*0.97, dt=(dx/W*3)+hOff, dy=midY-ecgY(dt)*amp;
+  hX.save(); hX.shadowColor='#00e676'; hX.shadowBlur=28;
+  hX.beginPath(); hX.arc(dx,dy,5,0,Math.PI*2);
+  hX.fillStyle='#00e676'; hX.fill(); hX.restore();
 
-  ctx.shadowBlur = 20;
-  ctx.beginPath();
-  ctx.arc(dotX, dotY, 4, 0, Math.PI*2);
-  ctx.fillStyle = '#ff4d5e';
-  ctx.fill();
+  hOff+=0.0028;
 
-  ctx.shadowBlur = 0;
-
-  offset += speed;
-  requestAnimationFrame(drawECG);
+  // HR flicker
+  const hr=Math.round(72+Math.sin(Date.now()/2200)*2);
+  const el=document.getElementById('hr-num');
+  if(el) el.textContent=hr;
+  requestAnimationFrame(drawHero);
 }
+drawHero();
 
-drawECG();
+// ── MINI ECG (About card) ──
+const mC=document.getElementById('mini-ecg');
+const mX=mC.getContext('2d');
+function resM(){mC.width=mC.offsetWidth||400;mC.height=mC.offsetHeight||80;}
+resM();
 
-// ─── CONDITIONS DATA ───
-const conditions = [
-  {abbr:'IAVB',name:'1st Degree AV Block',vn:'Blốc nhĩ thất độ 1',f1:0.663,danger:false},
-  {abbr:'AF',name:'Atrial Fibrillation',vn:'Rung nhĩ',f1:0.869,danger:true},
-  {abbr:'AFL',name:'Atrial Flutter',vn:'Cuồng nhĩ',f1:0.565,danger:true},
-  {abbr:'Brady',name:'Bradycardia',vn:'Nhịp tim chậm',f1:0.431,danger:false},
-  {abbr:'CRBBB',name:'Complete RBBB',vn:'Blốc nhánh phải hoàn toàn',f1:0.686,danger:false},
-  {abbr:'IRBBB',name:'Incomplete RBBB',vn:'Blốc nhánh phải không hoàn toàn',f1:0.574,danger:false},
-  {abbr:'LAnFB',name:'Left Anterior Fascicular Block',vn:'Blốc phân nhánh trái trước',f1:0.732,danger:false},
-  {abbr:'LAD',name:'Left Axis Deviation',vn:'Lệch trục trái',f1:0.737,danger:false},
-  {abbr:'LBBB',name:'Left Bundle Branch Block',vn:'Blốc nhánh trái',f1:0.831,danger:true},
-  {abbr:'LQRSV',name:'Low QRS Voltages',vn:'Điện thế QRS thấp',f1:0.222,danger:false},
-  {abbr:'NSIVCB',name:'Nonspecific IVCB',vn:'Rối loạn dẫn truyền trong thất',f1:0.265,danger:false},
-  {abbr:'PR',name:'PR Interval',vn:'Khoảng PR',f1:0.973,danger:false},
-  {abbr:'PAC',name:'Premature Atrial Contraction',vn:'Ngoại tâm thu nhĩ',f1:0.329,danger:false},
-  {abbr:'PVC',name:'Premature Ventricular Contraction',vn:'Ngoại tâm thu thất',f1:0.182,danger:true},
-  {abbr:'LPR',name:'Prolonged PR Interval',vn:'Khoảng PR kéo dài',f1:0.400,danger:false},
-  {abbr:'LQT',name:'Prolonged QT Interval',vn:'Khoảng QT kéo dài',f1:0.453,danger:true},
-  {abbr:'QAb',name:'Q Wave Abnormal',vn:'Sóng Q bất thường',f1:0.311,danger:false},
-  {abbr:'RAD',name:'Right Axis Deviation',vn:'Lệch trục phải',f1:0.634,danger:false},
-  {abbr:'RBBB',name:'Right Bundle Branch Block',vn:'Blốc nhánh phải',f1:0.820,danger:false},
-  {abbr:'SA',name:'Sinus Arrhythmia',vn:'Rối loạn nhịp xoang',f1:0.127,danger:false},
-  {abbr:'SB',name:'Sinus Bradycardia',vn:'Nhịp chậm xoang',f1:0.672,danger:false},
-  {abbr:'SNR',name:'Sinus Normal Rhythm',vn:'Nhịp xoang bình thường',f1:0.895,danger:false},
-  {abbr:'STach',name:'Sinus Tachycardia',vn:'Nhịp nhanh xoang',f1:0.816,danger:false},
-  {abbr:'SVPB',name:'Supraventricular Premature Beats',vn:'Nhịp sớm trên thất',f1:0.269,danger:false},
-  {abbr:'TAb',name:'T-wave Abnormal',vn:'Sóng T bất thường',f1:0.534,danger:false},
-  {abbr:'TInv',name:'T-wave Inversion',vn:'Sóng T đảo ngược',f1:0.238,danger:false},
-  {abbr:'VPB',name:'Ventricular Premature Beats',vn:'Nhịp sớm thất',f1:0.290,danger:true},
+let mOff=0;
+function drawMini(){
+  const W=mC.width,H=mC.height;
+  mX.clearRect(0,0,W,H);
+  // Dark monitor bg
+  mX.fillStyle='#081a0e'; mX.fillRect(0,0,W,H);
+  // Grid
+  mX.strokeStyle='rgba(0,180,70,0.12)'; mX.lineWidth=1;
+  for(let x=0;x<=W;x+=20){mX.beginPath();mX.moveTo(x,0);mX.lineTo(x,H);mX.stroke();}
+  for(let y=0;y<=H;y+=20){mX.beginPath();mX.moveTo(0,y);mX.lineTo(W,y);mX.stroke();}
+  // ECG line
+  const midY=H*0.5, amp=H*0.36;
+  mX.save();
+  mX.shadowColor='#00e676'; mX.shadowBlur=10;
+  mX.strokeStyle='#00e676'; mX.lineWidth=1.8; mX.lineJoin='round'; mX.lineCap='round';
+  mX.beginPath();
+  for(let x=0;x<W;x++){
+    const t=(x/W*3)+mOff, y=midY-ecgY(t)*amp;
+    x===0?mX.moveTo(x,y):mX.lineTo(x,y);
+  }
+  mX.stroke(); mX.restore();
+  mOff+=0.003;
+  requestAnimationFrame(drawMini);
+}
+drawMini();
+
+// ── CONDITIONS GRID ──
+const conds=[
+  {abbr:'IAVB',  name:'1st Degree AV Block',              vn:'Blốc nhĩ thất độ 1',             f1:0.663,d:false},
+  {abbr:'AF',    name:'Atrial Fibrillation',               vn:'Rung nhĩ',                        f1:0.869,d:true },
+  {abbr:'AFL',   name:'Atrial Flutter',                    vn:'Cuồng nhĩ',                       f1:0.565,d:true },
+  {abbr:'Brady', name:'Bradycardia',                       vn:'Nhịp tim chậm',                   f1:0.431,d:false},
+  {abbr:'CRBBB', name:'Complete RBBB',                     vn:'Blốc nhánh phải hoàn toàn',       f1:0.686,d:false},
+  {abbr:'IRBBB', name:'Incomplete RBBB',                   vn:'Blốc nhánh phải không hoàn toàn', f1:0.574,d:false},
+  {abbr:'LAnFB', name:'Left Anterior Fascicular Block',    vn:'Blốc phân nhánh trái trước',      f1:0.732,d:false},
+  {abbr:'LAD',   name:'Left Axis Deviation',               vn:'Lệch trục trái',                  f1:0.737,d:false},
+  {abbr:'LBBB',  name:'Left Bundle Branch Block',          vn:'Blốc nhánh trái',                 f1:0.831,d:true },
+  {abbr:'LQRSV', name:'Low QRS Voltages',                  vn:'Điện thế QRS thấp',               f1:0.222,d:false},
+  {abbr:'NSIVCB',name:'Nonspecific IVCB',                  vn:'Rối loạn dẫn truyền trong thất',  f1:0.265,d:false},
+  {abbr:'PR',    name:'PR Interval',                       vn:'Khoảng PR',                       f1:0.973,d:false},
+  {abbr:'PAC',   name:'Premature Atrial Contraction',      vn:'Ngoại tâm thu nhĩ',               f1:0.329,d:false},
+  {abbr:'PVC',   name:'Premature Ventricular Contraction', vn:'Ngoại tâm thu thất',              f1:0.182,d:true },
+  {abbr:'LPR',   name:'Prolonged PR Interval',             vn:'Khoảng PR kéo dài',               f1:0.400,d:false},
+  {abbr:'LQT',   name:'Prolonged QT Interval',             vn:'Khoảng QT kéo dài',               f1:0.453,d:true },
+  {abbr:'QAb',   name:'Q Wave Abnormal',                   vn:'Sóng Q bất thường',               f1:0.311,d:false},
+  {abbr:'RAD',   name:'Right Axis Deviation',              vn:'Lệch trục phải',                  f1:0.634,d:false},
+  {abbr:'RBBB',  name:'Right Bundle Branch Block',         vn:'Blốc nhánh phải',                 f1:0.820,d:false},
+  {abbr:'SA',    name:'Sinus Arrhythmia',                  vn:'Rối loạn nhịp xoang',             f1:0.127,d:false},
+  {abbr:'SB',    name:'Sinus Bradycardia',                 vn:'Nhịp chậm xoang',                 f1:0.672,d:false},
+  {abbr:'SNR',   name:'Sinus Normal Rhythm',               vn:'Nhịp xoang bình thường',          f1:0.895,d:false},
+  {abbr:'STach', name:'Sinus Tachycardia',                 vn:'Nhịp nhanh xoang',                f1:0.816,d:false},
+  {abbr:'SVPB',  name:'Supraventricular Premature Beats',  vn:'Nhịp sớm trên thất',              f1:0.269,d:false},
+  {abbr:'TAb',   name:'T-wave Abnormal',                   vn:'Sóng T bất thường',               f1:0.534,d:false},
+  {abbr:'TInv',  name:'T-wave Inversion',                  vn:'Sóng T đảo ngược',                f1:0.238,d:false},
+  {abbr:'VPB',   name:'Ventricular Premature Beats',       vn:'Nhịp sớm thất',                   f1:0.290,d:true },
 ];
 
-const grid = document.getElementById('cond-grid');
-conditions.forEach(c => {
-  const qualClass = c.f1 >= 0.8 ? 'good' : c.f1 >= 0.5 ? 'ok' : '';
-  grid.innerHTML += `
-    <div class="cond-card">
+const grid=document.getElementById('cond-grid');
+conds.forEach(c=>{
+  const col=c.f1>=0.8?'#00a040':c.f1>=0.5?'#e65100':'#90a4ae';
+  grid.innerHTML+=`
+    <div class="cond-card${c.d?' danger':''}">
       <div class="cond-abbr">${c.abbr}</div>
       <div class="cond-info">
         <div class="cond-name">${c.name}</div>
-        <div class="cond-vn">${c.vn}${c.danger ? ' <span style="color:var(--red-soft)">⚠️</span>' : ''}</div>
-        ${c.danger ? '<span class="danger-badge">Recall ≥ 0.75</span>' : ''}
+        <div class="cond-vn">${c.vn}</div>
+        ${c.d?'<span class="dbadge">⚠ Recall ≥ 0.75</span>':''}
       </div>
-      <div class="cond-f1">
-        ${c.f1.toFixed(3)}
-        <div class="f1-bar"><div class="f1-fill ${qualClass}" style="width:${c.f1*100}%"></div></div>
+      <div class="cond-f1-wrap">
+        <div class="cond-f1-val" style="color:${col}">${c.f1.toFixed(3)}</div>
+        <div class="fbar"><div class="fbar-fill" style="width:${c.f1*100}%;background:${col}"></div></div>
       </div>
-    </div>
-  `;
+    </div>`;
 });
 
-// ─── SCROLL REVEAL ───
-const revealEls = document.querySelectorAll('.reveal');
-const observer = new IntersectionObserver((entries) => {
-  entries.forEach(e => {
-    if(e.isIntersecting){
-      e.target.classList.add('visible');
-      observer.unobserve(e.target);
-    }
-  });
-},{threshold:0.1});
-revealEls.forEach(el => observer.observe(el));
-
+// ── SCROLL REVEAL ──
+const obs=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{if(e.isIntersecting){e.target.classList.add('vis');obs.unobserve(e.target);}});
+},{threshold:0.08});
+document.querySelectorAll('.reveal').forEach(el=>obs.observe(el));
 </script>
 </body>
 </html>
